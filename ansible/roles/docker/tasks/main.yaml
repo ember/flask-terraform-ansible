@@ -1,0 +1,61 @@
+---
+- name: Install Docker and role dependencies
+  apt:
+    name: "{{ item }}"
+    state: "present"
+    install_recommends: False
+  with_items:
+    - "apt-transport-https"
+    - "ca-certificates"
+    - "software-properties-common"
+
+- name: Get upstream APT GPG key
+  apt_key:
+    id: "{{ docker_apt_key }}"
+    keyserver: "hkp://pool.sks-keyservers.net"
+    state: "present"
+
+- name: Configure upstream APT repository
+  apt_repository:
+    repo: "{{ docker_repository }}"
+    state: "present"
+    update_cache: True
+
+- name: Install Docker
+  apt:
+    name: "docker-ce"
+    state: "present"
+    update_cache: True
+    install_recommends: False
+
+- name: Add specific ubuntu user to docker
+  user:
+    name: ubuntu
+    groups: "docker"
+    append: True
+
+- name: Start docker service
+  service:
+    name: docker
+    state: started
+- name: Enable docker service
+  service:
+     name: docker
+     enabled: yes
+     
+- name: Wait for dockerd
+  wait_for:
+    path: /var/run/docker.sock
+    state: present
+    delay: 10
+    
+- name: Install Docker Compose
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64"
+    dest: "/usr/local/bin/docker-compose"
+    force: True
+    owner: "root"
+    group: "root"
+    mode: "0755"
+
+

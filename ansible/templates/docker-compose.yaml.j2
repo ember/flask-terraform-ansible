@@ -1,0 +1,18 @@
+version: "3"
+services:
+  web:
+     image: nginx:alpine
+     restart: always
+     links:
+       - api
+     ports:
+       - "8080:80"
+     volumes:
+         - "./nginx.conf:/etc/nginx/conf.d/default.conf"
+  api:
+    image: pfragoso/hello-api:{{ image_version }}
+    restart: always
+    environment:
+     - REDIS_URL=redis://{{ redis_endpoint }}/0
+
+

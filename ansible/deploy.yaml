@@ -1,0 +1,70 @@
+---
+
+- hosts: all
+  become: yes
+  serial: "50%"
+
+  tasks:
+    - import_role:
+        name: docker
+
+    - name: Gathering ec2 facts
+      action: ec2_facts
+
+    - name: Gathering elb facts
+      local_action:
+        module: ec2_elb_facts
+        region: "{{ region }}"
+        names: "{{ elb_name }}"
+      register: elb
+      become: no
+
+    - name: Instance De-register
+      local_action:
+        module: ec2_elb
+        instance_id: "{{ ansible_ec2_instance_id }}"
+        region: "{{ region }}"
+        state: absent
+        wait: yes
+      become: no
+  
+    - name: Create /app dir
+      file: 
+        path: /app
+        state: directory
+        mode: 0755
+        owner: ubuntu
+        group: ubuntu
+      
+    - name: Copy nginx.conf
+      copy:
+        src: files/nginx.conf
+        dest: /app/nginx.conf
+
+    - name: Copy compose file
+      template:
+         src: templates/docker-compose.yaml.j2
+         dest: /app/docker-compose.yaml
+         owner: ubuntu
+         group: ubuntu
+
+    - name: run hello-api
+      command: docker-compose up -d
+      args:
+        chdir: /app
+
+    - name: Wait for hello-api to come up
+      wait_for:
+        port: 8080
+        delay: 5
+        timeout: 60
+
+    - name: Instance Register
+      local_action:
+        module: ec2_elb
+        region: "{{ region }}"
+        instance_id: "{{ ansible_ec2_instance_id }}"
+        ec2_elbs: "{{ elb_name }}"
+        state: present
+        wait: yes
+      become: no

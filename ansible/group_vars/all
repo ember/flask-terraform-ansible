@@ -1,0 +1,5 @@
+ansible_ssh_user: ubuntu
+region: eu-west-1
+elb_name: hello-api
+image_version: latest
+redis_endpoint: cluster-hello-api.onidl7.0001.euw1.cache.amazonaws.com:6379
